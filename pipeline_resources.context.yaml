@@ -1,0 +1,43 @@
+# Author: Michael C Gilson
+
+resources:
+
+- type: storage.v1.bucket # checked, verified at runtime. NOTE: bucket must be empty for DM to delete.
+  name: workflow-bucket-name # this is actually the name of the bucket
+  properties:
+    iamConfiguration.uniformBucketLevelAccess.enabled: true # untested
+
+- type: iam.v1.serviceAccount # checked, verified at runtime
+  name: trio-denovo-service # Name in DM
+  properties:
+    accountId: trio-denovo-service
+    serviceAccount:
+      displayName: trio-dnv-vm-gcs # Does not show up in glcoud iam service-accounts list
+
+- type: compute.v1.instance
+  name: trio-denovo
+  properties:
+    zone: us-east4-b
+    # predefined instance types are keys that map 1-1 with an attribute vector of the vm, including non-processor attribs like mem, attached disk, ect.
+    # e2-standard-2 -> (vCPU, RAM, ...)
+    machineType: https://www.googleapis.com/compute/v1/projects/<PID>/zones/us-east4-b/machineTypes/c2-standard-16
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      #size: 50GB
+      initializeParams:
+        sourceImage: https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/family/debian-9
+        diskSizeGb: 100
+    #serviceAccounts: # from examples
+      #- email: default
+        #scopes:
+        #- https://www.googleapis.com/auth/logging.write
+        #- https://www.googleapis.com/auth/monitoring.write
+    networkInterfaces:
+    - network: https://www.googleapis.com/compute/v1/projects/<PID>/global/networks/default # only allow contact from control endpoint and GCP agents
+      # Access Config required to give the instance a public IP address
+      accessConfigs:
+      - name: External NAT
+        type: ONE_TO_ONE_NAT
